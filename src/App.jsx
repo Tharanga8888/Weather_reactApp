@@ -1,64 +1,58 @@
-import { useState } from "react";
-import WeatherCard from "./components/WeatherCard.jsx";
-
+import React, { useState } from 'react'
+import SearchBar from './components/SearchBar'
+import WeatherCard from './components/WeatherCard'
+import Loader from './components/Loader'
+import useWeather from './hooks/useWeather'
 
 export default function App() {
-  const [city, setCity] = useState("");
-  const [weatherData, setWeatherData] = useState(null);
-  const [error, setError] = useState(null);
+  const [city, setCity] = useState('')
+  const [weatherResult, setWeatherResult] = useState(null)
+  const { fetchByCity, loading, error } = useWeather()
 
-  const apiKey = "dacfff0030b8fc26a879d5f858256b40";
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!city) {
-      setError("Please enter a city");
-      setWeatherData(null);
-      return;
+  const handleSearch = async () => {
+    if (!city || city.trim().length === 0) {
+      setWeatherResult({ error: 'Please enter a city' })
+      return
     }
 
     try {
-      const res = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}`
-      );
-      if (!res.ok) throw new Error("Could not fetch weather data");
-
-      const data = await res.json();
-      setWeatherData(data);
-      setError(null);
+      const { current, forecast } = await fetchByCity(city.trim())
+      setWeatherResult({ current, forecast })
     } catch (err) {
-      setError(err.message);
-      setWeatherData(null);
+      setWeatherResult({ error: err.message })
     }
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center p-4">
-      <form onSubmit={handleSubmit} className="my-8">
-        <input
-          type="text"
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          placeholder="Enter city"
-          className="cityInput p-3 text-2xl font-bold border-2 border-gray-400 rounded-lg w-72 mr-4"
-        />
-        <button
-          type="submit"
-          className="bg-green-600 hover:bg-green-500 text-white font-bold text-2xl px-5 py-3 rounded-md"
-        >
-          Get Weather
-        </button>
-      </form>
-
-      {(weatherData || error) && (
-        <div className="card bg-gradient-to-b from-blue-300 to-yellow-300 shadow-lg p-10 rounded-xl flex flex-col items-center w-80">
-          {error ? (
-            <p className="text-3xl font-bold text-gray-800">{error}</p>
-          ) : (
-            <WeatherCard data={weatherData} />
-          )}
+    <div className="min-h-screen bg-animated flex items-center justify-center p-6">
+      <div className="max-w-4xl w-full">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-4xl font-extrabold text-white">Awesome Weather</h1>
+          <div className="text-white small-muted">Beautiful weather data, fast.</div>
         </div>
-      )}
+
+        <div className="glass p-6 rounded-3xl shadow-xl">
+          <SearchBar city={city} setCity={setCity} onSearch={handleSearch} />
+
+          <div className="mt-6">
+            {loading && <Loader />}
+
+            {weatherResult?.error && (
+              <div className="p-6 bg-red-50 border border-red-200 rounded-lg text-red-700 font-semibold">{weatherResult.error}</div>
+            )}
+
+            {weatherResult?.current && (
+              <div className="mt-4">
+                <WeatherCard data={weatherResult.current} forecast={weatherResult.forecast} />
+              </div>
+            )}
+          </div>
+
+          <div className="mt-6 small-muted">Tip: try cities like "New York", "London" or "Colombo"</div>
+        </div>
+
+        <footer className="mt-6 text-center small-muted">Made with ❤️ • Data from OpenWeather</footer>
+      </div>
     </div>
-  );
+  )
 }
